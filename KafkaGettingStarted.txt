@@ -1,0 +1,288 @@
+				Kafka
+.....................................................................................
+Learning Track:
+...............
+
+1.Introduction to kafka 
+2.Kafka Architecture
+3.Kafka Programming using cli
+4.Producers and Consumers
+5.Kafka Connect
+6.Kafka Streams using KsqlDB
+7.kafka Related Design patterns in Microservice Arch
+
+Note: we dont use any programming language to connect to produce and consume kafka messages.
+
+What is Kafka?
+
+Every Enterprise is powered by data.
+We take information in, analyze it, manipulate it and creates more as output.
+Every application creates data, whether it is log messages,metrics,user activity,out going messages, or something else.
+Every byte of data has a story to tell, something of imporatance that will inform the next thing to be done.
+In order to know what that is, we need to get the data from where it is created to where it can be analyzed.
+
+We see this every day on websites like amazon,youtube,facebook, where our "clicks" on on items of interest to use are turned into recommmendations that are shown to us litte later.
+
+The faster we can do this, the more agile and resonsive our organizations can be.
+The less effort we spend on moving data around, the more we can focus on the core business at hand.
+
+      "This is why the pipeline is a critical component in the data driven enterpise"
+....................................................................................
+
+Publish and Subscribe Messaging (data):
+.......................................
+
+Before discussing the Apache Kafka , it is imporant for us to understand the concept of pub/sub messaging and why it is important.
+
+Pub and sub messaging is  a pattern that is characterized by the sender(publisher) of a piece of data (message) not spcificially directing to a reciver, Instead, the publisher classifies the message somewhat, and that receiver(subscriber) subscribes to receive certain of classes of messages.
+
+Pub /Sub systems often have a broker, a central point where messages are published , to facilite this.
+.....................................................................................
+			  How enterprise systems handles data
+			             (Pre Kafka)
+....................................................................................
+
+Many use cases for pub/sub starts with same way.
+
+   With a simple message queue or interprocess communication channel
+
+for eg, you create an application that needs to send montioring information somewhere. How do you send?
+
+You write monitoring message in a direct connection from your application to an application that displays your metrics on a dashboard, push metrics over that connection.
+
+let us say, you have systems, that system has two servers - frontend server,
+back end server
+
+both server sends metrics data to metrics server
+
+		FrontEnd               BackEnd Server
+		  Server
+		    |				|
+		    |				|
+		--------------------------------------
+				|
+			    Mertics Server
+
+
+If your server is running in clustered env
+
+		FrontEnd               FrontEnd Server
+		  Server
+		    |				|
+		    |				|
+		--------------------------------------
+				|
+			    Mertics Server
+
+		 Backend               Backend Server
+		  Server
+		    |				|
+		    |				|
+		--------------------------------------
+				|
+			    Mertics Server
+
+
+A single , direct metric servers irresptive of how many backend and front end server
+
+This looks a simple soultion to a problem that works when you are going to getting started with monitoring.
+
+Before long,you decide you would like to analyze your metircs over a longer term,
+that doesnot work very well in dashboard.
+
+When you introduce new service in your biz and where you have to introduce server,
+Now you have three more apps, that generating metrics data ,then metrics server need connect directly , recive,store,anaylze
+..............................................................................
+			Many Metrics publisher, using direct connections
+.....................................................................................
+
+ FrontEnd server  Database Server  Chat server  Mail Server PaymentServer
+         |            |                |           |            |
+-----------------------------------------------------------------------
+                                |
+			   publish metrics
+				|
+			    Metric Server
+
+
+Here all publisher are publishing "directly" metics to Metrics Servers.
+
+       "What if i want to store front data ,database data,back end data separatly"
+....................................................................................
+			Loosly Coupled Metric publisher and Server
+		Introduction of Pub/Sub Messing System
+...................................................................................
+
+
+ FrontEnd server  Database Server  Chat server  Mail Server PaymentServer
+         |            |                |           |            |
+-----------------------------------------------------------------------
+                                |
+			   publish metrics
+				 |
+			      Metrics
+			      Sub/Pub
+				|
+			    Metric Server
+
+Every Pub sub system is going to store messages inside "Queue" , the basic data storage model.
+In the above system we have only one /Single /Individual Queue System.
+
+Image one of your coworkers has been doing similar work with log messages, another has been working on tracking user behavior on the frontend website and providing that information to developers who are working on machine learning,
+As well as creating some reports for management.
+...................................................................................
+			 Multi Pub Sub Systems
+...................................................................................
+
+FrontEnd server  Database Server  Chat server  Mail Server PaymentServer
+         |            |                |           |            |
+-----------------------------------------------------------------------
+                                |
+
+Metrics     Logging              Tracking
+Pub/Sub     Pub/Sub              Pub/Sub
+  |           |                    |
+Metric    ---------             ----------       
+Server    |       |                |
+        Secuirty Log Search      MachingLearning 
+	Analysis Server		 and AI server
+         
+
+Now at last , we have refactored our system, but there is lot of "Duplication"
+Your company is maintaining multiple systems for queuing data, all of which have their own individual bugs and limitations.
+You will have more systems in future it will come.
+            
+                 "What if i would like to have single centeralized system
+		     That allows for publishing generic type of data
+		    Which helps your organization to grow as they introduce
+		    new systems"
+....................................................................................
+			Birth of Kafka :Entering into Kafka
+....................................................................................	
+Apache Kafka is pub/sub messaging system designed to solve the above problem.
+Instead of having multiple  Queue System, we can have only one System where we receive message,organize the message,store,process,and produce the report.
+
+Kafka inspired from "Logging System" or Loggers to store messages, instead of storing message in traditional messaging systems.
+
+Traditional Messaging Systems:
+..............................
+
+Traditional Messaging systems are built based on the standards like "AMQP" protocal.
+Any pub/sub messaging product like rabbit mq is built on the standards only.
+
+According to the AMQP Standards.
+ 
+1.Messages are stored in a queue
+2.Queue stores messages which is tranisent by default. if you want you can persit in disk.
+3.The messages can be altered(update,delete)
+4.The messages are deleted once it is consumed
+
+	    "Kafka was not designed based on Traditional Messaging System"
+
+.....................................................................................
+		    "Kafka was designed based on  Loggers"
+	
+What is Log?
+   Tracking activites of an application,store those activites in "memory or in  a disk file" in order to analyze them in furture.
+
+If you are developer, you encounter loggers every day in your development cycle.
+
+Logs gives complete information about the system which is running.
+
+if you are java developer, you might have used various logging implementations.
+We call as "Logging Frameworks"
+
+Log gives just information about what just happened or happing in your system for eg
+some warings,some info,some bugs, some tracking , some tracing..........
+
+Logs :
+2016-06-16 17:02:13 TRACE Trace log message
+2016-06-16 17:02:13 DEBUG Debug log message
+2016-06-16 17:02:13 INFO  Info log message
+2016-06-16 17:02:13 ERROR Error log message
+.....................................................................................
+			 Log structure and its characteristics
+.....................................................................................
+
+Log information is stored in a file called "Log file" - system.log
+Log file is used for future analytics such as debugging,finding warnings,errors...
+
+What is difference between "normal files" and log files?
+
+=>Log files are "append only", you cant add any new entry in between, which makes the file "immutable" - cant be edited or read only.
+=>Normal files are based on "Edit Mode" or Replace mode
+    Files are edited or replaced later.
+
+		  "Kafka is just based on Log System"
+		       Kafka is just Logger System
+
+    Since kafka is logger system is it same as "Slf4j,log4j" Kind of loggers.
+			
+Some what yes, but Kafka is more beyond that....
+
+		Kafka is not based on "traditional log files" 
+
+
+Kafka is fundmentally based on "Commit Logs"
+
+What is commit log?
+    "In data management platforms, a commit is making set of tenative changes permanent".
+    "Making the end of a transaction and providing Durablity to ACID transactions"
+  The record of commits is called "Commit log"
+
+The record of commits is called "Commit Log"
+
+What Kafka is going to record into commit log?
+     Kafka was designed to store informations(data).
+
+What type of information?
+  Any type of information we can store into commit log.
+.....................................................................................
+			  Event
+....................................................................................
+What is Event?
+   An Event is any type of action,incident,or change are happening or just happened
+for eg:
+  Now i am typing,Now i am teaching - happening
+  Just i had coffee,Just i received mail, just i clicked a link, just i search product - happened.
+  
+   An Event is just remainder or notification  your happenings or happened.
+...................................................................................
+		     Event Driven Architecture(Software system)
+....................................................................................
+
+The Software system can track what is happening, just happended , stores into a file called commit log, later that commit log can be replayed to process those events to produce various reports
+
+Let us imagine, You have mobile apps, which tracks your locations where ever you move, those locations are recorded into a file by "Event Driven System"(Kafka).
+Based on those data , you can get report like that where were you at morning,afternoon,evening...
+
+Eg:
+ Today stock price is $40 at 10Am
+ I met my friend yesterday at east coast road
+ Made payment of $500 to Ramesh
+
+Imgaine i need  somebody or somthing should record every activity of my life from the early moring when i get up and till bed.
+
+	  There is a system to record every events of your life that is called 
+			   Kafka
+
+	Kafka is Event Processing Software , which process events
+
+
+
+
+    
+
+
+
+
+
+
+
+
+			
+ 
+		
+
+
+
