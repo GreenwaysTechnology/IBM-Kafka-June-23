@@ -110,7 +110,7 @@ Here all publisher are publishing "directly" metics to Metrics Servers.
        "What if i want to store front data ,database data,back end data separatly"
 ....................................................................................
 			Loosly Coupled Metric publisher and Server
-		Introduction of Pub/Sub Messing System
+		         Introduction of Pub/Sub Messing System
 ...................................................................................
 
 
@@ -246,7 +246,7 @@ for eg:
   Now i am typing,Now i am teaching - happening
   Just i had coffee,Just i received mail, just i clicked a link, just i search product - happened.
   
-   An Event is just remainder or notification  your happenings or happened.
+   An Event is just remainder or notification of  your happenings or happened.
 ...................................................................................
 		     Event Driven Architecture(Software system)
 ....................................................................................
@@ -264,9 +264,374 @@ Eg:
 Imgaine i need  somebody or somthing should record every activity of my life from the early moring when i get up and till bed.
 
 	  There is a system to record every events of your life that is called 
-			   Kafka
+			      Kafka
 
-	Kafka is Event Processing Software , which process events
+	 Kafka is Event Processing Software , which process events
+.....................................................................................
+			Event Architecture
+.....................................................................................
+
+How kafka has been implemented?
+
+   "Kafka is a software"
+   "Kafka is a file(Commit log file) processing software
+   "Kafka is written in java and scala" - Kafka is just java application
+   "In order to run Kafka we need JVM"
+
+How event is represented into kafka?
+
+	Event is just a message.
+        Every message has its own arch.
+        In Kafka the Event/Message is called as "Record".
+
+Event Contains Two things:
+..........................
+1.What happened/Happing - Name of the Event
+2.State - Data
+
+State:
+......
+  The state is nothing but data.
+
+
+State Representation:
+
+ In General state(data) is stored in relational databases "as table"
+ A table represents the state of something like 
+    User - id,name,email,password,city
+
+Since User data can be stored and proceed into tables.
+
+Can we store events into table?
+   Events also has state like things(user,customer,product) in real time.
+
+We can but not all types of events into table.
+.....................................................................................
+			    Modern Data Modeling
+.....................................................................................
+     Generally domains are modeled based on "Things(Customer,Order,Payment) first"
+		Now a days People started thinking based on Events first
+          Instead of storing things into database , we store events
+
+Events also has some state like "Things"
+
+   "Events has some description of what happened with it", but Primary idea is that          event is indication in time that thing took place".
+
+How to store events?
+   Logs - Log is structured and the sequence  of the evnets occured in the method calls.
+....................................................................................
+			 kafka Distribution - Kafka Setup
+...................................................................................
+
+Kafka distribution:
+ Kafka is available in two distribution
+
+1.Apache Kafka
+   It is open source version of kafka 
+
+2.Confluent Kafka
+   It is abstraction of apache kafka, Commericial version of apache kafka
+
+Apache kafka vs confluent kafka
+https://www.confluent.io/apache-kafka-vs-confluent/
+
+
+
+Platforms:
+
+Kafka can be installed any platform
+
+1.Bare metal machines
+  Kafak is available for all operating system.
+
+1.Windows - may be good for basic use cases
+2.Linux - recommended for advanced use cases
+3.mac - recommended for advanced use cases
+
+2.VM env
+  You  can setup kafka on any industry standard VMS - oracle virtual box
+
+3.Container based distributed: - docker and kubernetes
+   It is recommened in development env and also can be used in prod
+.................................................................................
+			1.Bare metal machines
+
+Linux: Ubuntu 20.x
+
+If you are working in windows 10 or 11, there is feature called "Windows SubSystem" - WSL 2
+https://learn.microsoft.com/en-us/windows/wsl/install
+
+https://www.confluent.io/blog/set-up-and-run-kafka-on-windows-linux-wsl-2/
+
+After installing linux:
+
+1.java 
+
+jdk 11.
+
+ sudo apt install openjdk-11-jdk -y
+
+subugee@LAPTOP-R2TGGFDL:~$ java --version
+openjdk 11.0.19 2023-04-18
+OpenJDK Runtime Environment (build 11.0.19+7-post-Ubuntu-0ubuntu120.04.1)
+OpenJDK 64-Bit Server VM (build 11.0.19+7-post-Ubuntu-0ubuntu120.04.1, mixed mode, sharing)
+
+Setting up Kafka:
+
+1.Apache Kafka -https://kafka.apache.org/
+  =>Source distribution
+	-you can build from the source
+  =>Binary distribution
+        -you can download already built folder
+
+wget https://downloads.apache.org/kafka/3.4.1/kafka-3.4.1-src.tgz 
+
+wget https://archive.apache.org/dist/kafka/3.4.1/kafka-3.4.1-src.tgz 
+
+After downloading tar(zip) file,we need to extract
+
+tar -xzf kafka-3.4.1-src.tgz
+
+$cd kafka-3.4.1-src/
+
+$subugee@LAPTOP-R2TGGFDL:~/kafkatraining/apacheKafka/kafka-3.4.1-src$ ls -l
+total 408
+-rw-r--r--  1 subugee subugee   720 May 26 07:10 CONTRIBUTING.md
+-rw-r--r--  1 subugee subugee   754 May 26 07:10 HEADER
+-rw-r--r--  1 subugee subugee  7075 May 26 07:10 Jenkinsfile
+-rw-r--r--  1 subugee subugee 11358 May 26 07:10 LICENSE
+-rw-r--r--  1 subugee subugee 14910 May 26 07:10 LICENSE-binary
+-rw-r--r--  1 subugee subugee  1131 May 26 07:10 NOTICE
+-rw-r--r--  1 subugee subugee 28184 May 26 07:10 NOTICE-binary
+-rw-r--r--  1 subugee subugee   570 May 26 07:10 PULL_REQUEST_TEMPLATE.md
+-rw-r--r--  1 subugee subugee 13413 May 26 07:10 README.md
+-rw-r--r--  1 subugee subugee  9177 May 26 07:10 TROGDOR.md
+-rw-r--r--  1 subugee subugee  8271 May 26 07:10 Vagrantfile
+drwxr-xr-x  3 subugee subugee  4096 May 26 07:10 bin
+-rw-r--r--  1 subugee subugee 93585 May 26 07:10 build.gradle
+drwxr-xr-x  2 subugee subugee  4096 May 26 07:10 checkstyle
+drwxr-xr-x  3 subugee subugee  4096 May 26 07:10 clients
+drwxr-xr-x  3 subugee subugee  4096 May 26 07:10 config
+drwxr-xr-x 10 subugee subugee  4096 May 26 07:10 connect
+drwxr-xr-x  3 subugee subugee  4096 May 26 07:10 core
+-rw-r--r--  1 subugee subugee  3087 May 26 07:10 doap_Kafka.rdf
+drwxr-xr-x  6 subugee subugee  4096 May 26 07:10 docs
+drwxr-xr-x  4 subugee subugee  4096 May 26 07:10 examples
+drwxr-xr-x  3 subugee subugee  4096 May 26 07:10 generator
+drwxr-xr-x  4 subugee subugee  4096 May 26 07:10 gradle
+-rw-r--r--  1 subugee subugee  1173 May 26 07:10 gradle.properties
+-rwxr-xr-x  1 subugee subugee  8674 May 26 07:10 gradlew
+-rwxr-xr-x  1 subugee subugee   965 May 26 07:10 gradlewAll
+drwxr-xr-x  3 subugee subugee  4096 May 26 07:10 group-coordinator
+drwxr-xr-x  3 subugee subugee  4096 May 26 07:10 jmh-benchmarks
+-rwxr-xr-x  1 subugee subugee 19702 May 26 07:10 kafka-merge-pr.py
+drwxr-xr-x  2 subugee subugee  4096 May 26 07:10 licenses
+drwxr-xr-x  3 subugee subugee  4096 May 26 07:10 log4j-appender
+drwxr-xr-x  3 subugee subugee  4096 May 26 07:10 metadata
+drwxr-xr-x  5 subugee subugee  4096 May 26 07:10 raft
+-rwxr-xr-x  1 subugee subugee 35399 May 26 07:10 release.py
+-rwxr-xr-x  1 subugee subugee  6162 May 26 07:10 release_notes.py
+-rwxr-xr-x  1 subugee subugee  2150 May 26 07:10 retry_zinc
+drwxr-xr-x  3 subugee subugee  4096 May 26 07:10 server-common
+-rw-r--r--  1 subugee subugee  2089 May 26 07:10 settings.gradle
+drwxr-xr-x  3 subugee subugee  4096 May 26 07:10 shell
+drwxr-xr-x  4 subugee subugee  4096 May 26 07:10 storage
+drwxr-xr-x 26 subugee subugee  4096 May 26 07:10 streams
+drwxr-xr-x  7 subugee subugee  4096 May 26 07:10 tests
+drwxr-xr-x  3 subugee subugee  4096 May 26 07:10 tools
+drwxr-xr-x  3 subugee subugee  4096 May 26 07:10 trogdor
+drwxr-xr-x  3 subugee subugee  4096 May 26 07:10 vagrant
+-rw-r--r--  1 subugee subugee  3803 May 26 07:10 wrapper.gradle
+....................................................................................
+			   Exploring directories
+.....................................................................................
+
+bin dir
+ contains all shell scripts to run and manage kafka infrastructure
+subugee@LAPTOP-R2TGGFDL:~/kafkatraining/apacheKafka/kafka-3.4.1-src/bin$ ls -l
+total 164
+-rwxr-xr-x 1 subugee subugee  1423 May 26 07:10 connect-distributed.sh
+-rwxr-xr-x 1 subugee subugee  1396 May 26 07:10 connect-mirror-maker.sh
+-rwxr-xr-x 1 subugee subugee  1420 May 26 07:10 connect-standalone.sh
+-rwxr-xr-x 1 subugee subugee   861 May 26 07:10 kafka-acls.sh
+-rwxr-xr-x 1 subugee subugee   873 May 26 07:10 kafka-broker-api-versions.sh
+-rwxr-xr-x 1 subugee subugee   860 May 26 07:10 kafka-cluster.sh
+-rwxr-xr-x 1 subugee subugee   864 May 26 07:10 kafka-configs.sh
+-rwxr-xr-x 1 subugee subugee   945 May 26 07:10 kafka-console-consumer.sh
+-rwxr-xr-x 1 subugee subugee   944 May 26 07:10 kafka-console-producer.sh
+-rwxr-xr-x 1 subugee subugee   871 May 26 07:10 kafka-consumer-groups.sh
+-rwxr-xr-x 1 subugee subugee   948 May 26 07:10 kafka-consumer-perf-test.sh
+-rwxr-xr-x 1 subugee subugee   871 May 26 07:10 kafka-delegation-tokens.sh
+-rwxr-xr-x 1 subugee subugee   869 May 26 07:10 kafka-delete-records.sh
+-rwxr-xr-x 1 subugee subugee   866 May 26 07:10 kafka-dump-log.sh
+-rwxr-xr-x 1 subugee subugee   863 May 26 07:10 kafka-features.sh
+-rwxr-xr-x 1 subugee subugee   865 May 26 07:10 kafka-get-offsets.sh
+-rwxr-xr-x 1 subugee subugee   870 May 26 07:10 kafka-leader-election.sh
+-rwxr-xr-x 1 subugee subugee   863 May 26 07:10 kafka-log-dirs.sh
+-rwxr-xr-x 1 subugee subugee   881 May 26 07:10 kafka-metadata-quorum.sh
+-rwxr-xr-x 1 subugee subugee   873 May 26 07:10 kafka-metadata-shell.sh
+-rwxr-xr-x 1 subugee subugee   862 May 26 07:10 kafka-mirror-maker.sh
+-rwxr-xr-x 1 subugee subugee   959 May 26 07:10 kafka-producer-perf-test.sh
+-rwxr-xr-x 1 subugee subugee   874 May 26 07:10 kafka-reassign-partitions.sh
+-rwxr-xr-x 1 subugee subugee   874 May 26 07:10 kafka-replica-verification.sh
+-rwxr-xr-x 1 subugee subugee 10884 May 26 07:10 kafka-run-class.sh
+-rwxr-xr-x 1 subugee subugee  1376 May 26 07:10 kafka-server-start.sh
+-rwxr-xr-x 1 subugee subugee  1361 May 26 07:10 kafka-server-stop.sh
+-rwxr-xr-x 1 subugee subugee   860 May 26 07:10 kafka-storage.sh
+-rwxr-xr-x 1 subugee subugee   945 May 26 07:10 kafka-streams-application-reset.sh
+-rwxr-xr-x 1 subugee subugee   863 May 26 07:10 kafka-topics.sh
+-rwxr-xr-x 1 subugee subugee   879 May 26 07:10 kafka-transactions.sh
+-rwxr-xr-x 1 subugee subugee   958 May 26 07:10 kafka-verifiable-consumer.sh
+-rwxr-xr-x 1 subugee subugee   958 May 26 07:10 kafka-verifiable-producer.sh
+-rwxr-xr-x 1 subugee subugee  1714 May 26 07:10 trogdor.sh
+drwxr-xr-x 2 subugee subugee  4096 May 26 07:10 windows
+-rwxr-xr-x 1 subugee subugee   867 May 26 07:10 zookeeper-security-migration.sh
+-rwxr-xr-x 1 subugee subugee  1393 May 26 07:10 zookeeper-server-start.sh
+-rwxr-xr-x 1 subugee subugee  1366 May 26 07:10 zookeeper-server-stop.sh
+-rwxr-xr-x 1 subugee subugee  1019 May 26 07:10 zookeeper-shell.sh
+
+Windows folder contains windows distribution
+subugee@LAPTOP-R2TGGFDL:~/kafkatraining/apacheKafka/kafka-3.4.1-src/bin/windows$ ls -l
+total 124
+-rw-r--r-- 1 subugee subugee 1243 May 26 07:10 connect-distributed.bat
+-rw-r--r-- 1 subugee subugee 1241 May 26 07:10 connect-standalone.bat
+-rw-r--r-- 1 subugee subugee  873 May 26 07:10 kafka-acls.bat
+-rw-r--r-- 1 subugee subugee  885 May 26 07:10 kafka-broker-api-versions.bat
+-rw-r--r-- 1 subugee subugee  876 May 26 07:10 kafka-configs.bat
+-rw-r--r-- 1 subugee subugee  925 May 26 07:10 kafka-console-consumer.bat
+-rw-r--r-- 1 subugee subugee  925 May 26 07:10 kafka-console-producer.bat
+-rw-r--r-- 1 subugee subugee  883 May 26 07:10 kafka-consumer-groups.bat
+-rw-r--r-- 1 subugee subugee  938 May 26 07:10 kafka-consumer-perf-test.bat
+-rw-r--r-- 1 subugee subugee  885 May 26 07:10 kafka-delegation-tokens.bat
+-rw-r--r-- 1 subugee subugee  883 May 26 07:10 kafka-delete-records.bat
+-rw-r--r-- 1 subugee subugee  878 May 26 07:10 kafka-dump-log.bat
+-rw-r--r-- 1 subugee subugee  877 May 26 07:10 kafka-get-offsets.bat
+-rw-r--r-- 1 subugee subugee  884 May 26 07:10 kafka-leader-election.bat
+-rw-r--r-- 1 subugee subugee  877 May 26 07:10 kafka-log-dirs.bat
+-rw-r--r-- 1 subugee subugee  895 May 26 07:10 kafka-metadata-quorum.bat
+-rw-r--r-- 1 subugee subugee  874 May 26 07:10 kafka-mirror-maker.bat
+-rw-r--r-- 1 subugee subugee  940 May 26 07:10 kafka-producer-perf-test.bat
+-rw-r--r-- 1 subugee subugee  888 May 26 07:10 kafka-reassign-partitions.bat
+-rw-r--r-- 1 subugee subugee  886 May 26 07:10 kafka-replica-verification.bat
+-rwxr-xr-x 1 subugee subugee 5275 May 26 07:10 kafka-run-class.bat
+-rw-r--r-- 1 subugee subugee 1377 May 26 07:10 kafka-server-start.bat
+-rw-r--r-- 1 subugee subugee  997 May 26 07:10 kafka-server-stop.bat
+-rw-r--r-- 1 subugee subugee  874 May 26 07:10 kafka-storage.bat
+-rw-r--r-- 1 subugee subugee  972 May 26 07:10 kafka-streams-application-reset.bat
+-rw-r--r-- 1 subugee subugee  875 May 26 07:10 kafka-topics.bat
+-rw-r--r-- 1 subugee subugee  893 May 26 07:10 kafka-transactions.bat
+-rw-r--r-- 1 subugee subugee 1192 May 26 07:10 zookeeper-server-start.bat
+-rw-r--r-- 1 subugee subugee  905 May 26 07:10 zookeeper-server-stop.bat
+.....................................................................................
+			Core concepts of Kafka
+.....................................................................................
+
+Broker:
+.......
+   Since Kafka is a java program which is deployed on JVM,Kafka runs on the JVM Which is process.
+   The JVM is other wise called as "Kafka Broker or Kafka Server"
+.....................................................................................
+			 Types of Kafka Broker
+.....................................................................................
+
+Kafka has been designed based on "Distributed Architecture" - By Default Kafka is distributed.
+
+General Characteritics of Disbutributed Architecture:
+.....................................................
+
+1.Scalablity
+    Running more than one process,hosting the same app. Running the same app on    multiple servers.
+
+Cluster:
+  When we scale apps into multiple servers, we need to group them under a single unit.
+  Group of machines are called as "cluster"
+
+2.High Availablity:
+   if any one server fails in the cluster, clients should not be affected, we need to make our app always available.
+   How to make highly available?
+      Via cluster
+
+Kafka uses distributed features such as cluster
+
+In kafka we can run "Multiple Brokers" as a cluter.
+
+Kafak cluster can be in the same machine or across machines in network.
+.....................................................................................
+			   Cluster Manager
+.....................................................................................
+
+In any distributed arch, if machines are running in a cluster or clusters , the cluster need to mananged.
+Who can manage cluster?
+   Cluster Manager.
+
+Kafka and cluster Manager:
+  Kafka is distributed, runs in a cluster, we need to manage that cluster.
+Kafka provides cluster manager
+  =>ZooKeeper - It is distributed cluster manager software
+  =>KRaft -  it is new cluster manager inside Kafka cluster.
+
+if you run single broker or multiple brokers we need to have cluster manager.
+
+1.Apache Zookeeper:
+	ZooKeeper is a centralized service for maintaining configuration information, naming, providing distributed synchronization, and providing group services. 
+2.Apache KRaft:
+    KRaft is consenus protocal that was introduced to replace ZooKeeper for meta data management
+
+Roles of Cluster Managers:
+1.To manage cluster
+2.Failures detections and recovery
+3.Storing ACL and secrets
+.....................................................................................
+
+Lab 1:
+ Kafka Cluster setup 
+ Single broker, single zookeeper.
+
+configuration files:
+ cd config
+subugee@LAPTOP-R2TGGFDL:~/kafkatraining/apacheKafka/kafka-3.4.1-src/config$ ls
+connect-console-sink.properties    connect-file-source.properties   consumer.properties  server.properties
+connect-console-source.properties  connect-log4j.properties         kraft                tools-log4j.properties
+connect-distributed.properties     connect-mirror-maker.properties  log4j.properties     trogdor.conf
+connect-file-sink.properties       connect-standalone.properties    producer.properties  zookeeper.properties
+
+
+zookeeper:
+ Has a config file called config/zookeeper.properties
+
+dataDir=/tmp/zookeeper
+    The directory where the snapshot of cluster information is stored.
+
+clientPort=2181
+  The Port at which clients connect , 
+  who is client? Kafka Broker is client.
+
+Steps:
+ =>Start zooKeeper
+
+./bin/zookeeper-server-start.sh  config/zookeeper.properties
+Classpath is empty. Please build the project first e.g. by running './gradlew jar -PscalaVersion=2.13.10'
+
+if you see the above error, that means your distribution is source code distribution so you have to build it.
+
+How to build?
+./gradlew jar -PscalaVersion=2.13.10
+
+./bin/zookeeper-server-start.sh  config/zookeeper.properties
+
+Starting Kafka Broker:
+......................
+
+./bin/kafka-server-start.sh config/server.properties
+
+
+
+
+
+
+
+
+
 
 
 
