@@ -1144,23 +1144,108 @@ You can all the messages is being published from the begining and also the lates
 .....................................................................................
 			Basic Property Configuration
 .....................................................................................
+property option will gives meta or detailed information about messages and topics
+
+
+--property <String: prop>                The properties to initialize the
+                                           message formatter. Default
+                                           properties include:
+                                          print.timestamp=true|false
+                                          print.key=true|false
+                                          print.offset=true|false
+                                          print.partition=true|false
+                                          print.headers=true|false
+                                          print.value=true|false
+                                          key.separator=<key.separator>
+                                          line.separator=<line.separator>
+                                          headers.separator=<line.separator>
+                                          null.literal=<null.literal>
+                                          key.deserializer=<key.deserializer>
+                                          value.deserializer=<value.
+                                           deserializer>
+                                          header.deserializer=<header.
+                                           deserializer>
+                                         Users can also pass in customized
+                                           properties for their formatter; more
+                                           specifically, users can pass in
+                                           properties keyed with 'key.
+                                           deserializer.', 'value.
+                                           deserializer.' and 'headers.
+                                           deserializer.' prefixes to configure
+                                           their deserializers.
 
 
 
 
+ ./bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic todos-topic --from-beginning --property print.timestamp=true
+
+CreateTime:1686722651596        Learn Kafka
+CreateTime:1686722722914        Learn Distributed architecture
+CreateTime:1686722732176        Learn Kafka Streams
+CreateTime:1686723527368        How are you Kafka?
+CreateTime:1686723693981        How Kafka sends messages
+.....................................................................................
+			Log Retention
+.....................................................................................
+
+By default , events(messages) are stored into topic, topic finally persits into log file.
+
+Can i delete events from the log file?
+ No, Kafka log messages/events are immutable - readonly.
+
+can i delete log files?
+  Yes you can delete log files.
+
+if you delete log files , you configure policies which is called as "Log Rentention Policy"
+
+Log Retension policy can be set "Broker Level" or "Topic Level"
+
+If you set policy at broker level, which is applied to all topics which are created insid broker.
+
+you can set policy at topic level, which is applied to only that topic only.
+
+Broker Level Configuration:
+...........................
+The policy can  be set to delete log file after "a period of time", or after "a given size has accumulated".
+
+Period of time :
+  I want to delete log files after 7 days, 7 months, 7 weeks, 7 years,7 mins,7 sec,7 ms
+A Given size accumulated:
+   i want to delete log files once the file size reaches 1gb
+   You have to set value in bytes
+   The value must be postive integer
+   if you set -1, meaning that no limit on size 
 
 
+Time based configuration:
 
+log.retention.hours=168 
+   By default 7 days, one week
+log.retention.minutes=10
+   mins based config
+log.rentiontion.ms=100
+    milli secs based configuration
 
+Size based configuraton
+log.retention.bytes=1073741824
+  To delete logs based on the total number of bytes it retained 
+ by default 1 gb.
 
+Topic level configuration:
 
+When we create topic or when alter topic 
 
-
-
-
-
-
-
+--config <String: name=value>            A topic configuration override for the
+                                           topic being created or altered. The
+                                           following is a list of valid
+                                           configurations:
+                                                cleanup.policy
+                                                compression.type
+                                                delete.retention.ms
+                                                file.delete.delay.ms
+                                                flush.messages
+                                                flush.ms
+                                                follower.replication.throttled.
 
 
 
