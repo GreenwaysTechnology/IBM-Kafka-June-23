@@ -1248,6 +1248,443 @@ When we create topic or when alter topic
                                                 follower.replication.throttled.
 
 
+.....................................................................................
+
+Lab:
+ 
+############################# Log Retention Policy #############################
+
+# The following configurations control the disposal of log segments. The policy can
+# be set to delete segments after a period of time, or after a given size has accumulated.
+# A segment will be deleted whenever *either* of these criteria are met. Deletion always happens
+# from the end of the log.
+
+# The minimum age of a log file to be eligible for deletion due to age
+# log.retention.hours=168
+log.retention.minutes=1
+# A size-based retention policy for logs. Segments are pruned from the log unless the remaining
+# segments drop below log.retention.bytes. Functions independently of log.retention.hours.
+#log.retention.bytes=1073741824
+
+# The maximum size of a log segment file. When this size is reached a new log segment will be created.
+#log.segment.bytes=1073741824
+
+# The interval at which log segments are checked to see if they can be deleted according
+# to the retention policies
+# log.retention.check.interval.ms=300000
+ log.retention.check.interval.ms=3000
+.....................................................................................
+
+Lab :
+Create topic with rentension policy
+
+$./bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic hello-topic --config retention.ms=20000
+
+Produce some events
+ ./bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic hello-topic
+
+consume events
+ ./bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic hello-topic --from-beginning --property print.timestamp=true
+
+Wait for 2 mins and check the messages again. you can notice , messages have been log files been deleted
+....................................................................................
+			      Dynamic Configuration
+....................................................................................
+
+Broker is running in production, broker has many topics already created , having some logs also.
+
+By default Brokers and topics configurations are dervied from global "server.properties" file and default configurations supplied by kafka
+
+What if i want to override like broker configuration or topic configuration during runtime : dynamic configurations
+
+Overriding Topic Configuration Defaults
+
+Dynamic Kafka Broker configuration change using the kafka-configs CLI
+....................................................................................
+			kafka-configs.sh -To manage runtime Configurations
+....................................................................................
+./bin/kafka-configs.sh --help
+This tool helps to manipulate and describe entity config for a topic, client, user, broker or ip
+Option                                 Description
+------                                 -----------
+--add-config <String>                  Key Value pairs of configs to add.
+                                         Square brackets can be used to group
+                                         values which contain commas: 'k1=v1,
+                                         k2=[v1,v2,v2],k3=v3'. The following
+                                         is a list of valid configurations:
+                                         For entity-type 'topics':
+                                        cleanup.policy
+                                        compression.type
+                                        delete.retention.ms
+                                        file.delete.delay.ms
+                                        flush.messages
+                                        flush.ms
+                                        follower.replication.throttled.
+                                         replicas
+                                        index.interval.bytes
+                                        leader.replication.throttled.replicas
+                                        local.retention.bytes
+                                        local.retention.ms
+                                        max.compaction.lag.ms
+                                        max.message.bytes
+                                        message.downconversion.enable
+                                        message.format.version
+                                        message.timestamp.difference.max.ms
+                                        message.timestamp.type
+                                        min.cleanable.dirty.ratio
+                                        min.compaction.lag.ms
+                                        min.insync.replicas
+                                        preallocate
+                                        remote.storage.enable
+                                        retention.bytes
+                                        retention.ms
+                                        segment.bytes
+                                        segment.index.bytes
+                                        segment.jitter.ms
+                                        segment.ms
+                                        unclean.leader.election.enable
+                                       For entity-type 'brokers':
+                                        advertised.listeners
+                                        background.threads
+                                        compression.type
+                                        follower.replication.throttled.rate
+                                        leader.replication.throttled.rate
+                                        listener.security.protocol.map
+                                        listeners
+                                        log.cleaner.backoff.ms
+                                        log.cleaner.dedupe.buffer.size
+                                        log.cleaner.delete.retention.ms
+                                        log.cleaner.io.buffer.load.factor
+                                        log.cleaner.io.buffer.size
+                                        log.cleaner.io.max.bytes.per.second
+                                        log.cleaner.max.compaction.lag.ms
+                                        log.cleaner.min.cleanable.ratio
+                                        log.cleaner.min.compaction.lag.ms
+                                        log.cleaner.threads
+                                        log.cleanup.policy
+                                        log.flush.interval.messages
+                                        log.flush.interval.ms
+                                        log.index.interval.bytes
+                                        log.index.size.max.bytes
+                                        log.message.downconversion.enable
+                                        log.message.timestamp.difference.max.
+                                         ms
+                                        log.message.timestamp.type
+                                        log.preallocate
+                                        log.retention.bytes
+                                        log.retention.ms
+                                        log.roll.jitter.ms
+                                        log.roll.ms
+                                        log.segment.bytes
+                                        log.segment.delete.delay.ms
+                                        max.connection.creation.rate
+                                        max.connections
+                                        max.connections.per.ip
+                                        max.connections.per.ip.overrides
+                                        message.max.bytes
+                                        metric.reporters
+                                        min.insync.replicas
+                                        num.io.threads
+                                        num.network.threads
+                                        num.recovery.threads.per.data.dir
+                                        num.replica.fetchers
+                                        principal.builder.class
+                                        producer.id.expiration.ms
+                                        replica.alter.log.dirs.io.max.bytes.
+                                         per.second
+                                        sasl.enabled.mechanisms
+                                        sasl.jaas.config
+                                        sasl.kerberos.kinit.cmd
+                                        sasl.kerberos.min.time.before.relogin
+                                        sasl.kerberos.principal.to.local.rules
+                                        sasl.kerberos.service.name
+                                        sasl.kerberos.ticket.renew.jitter
+                                        sasl.kerberos.ticket.renew.window.
+                                         factor
+                                        sasl.login.refresh.buffer.seconds
+                                        sasl.login.refresh.min.period.seconds
+                                        sasl.login.refresh.window.factor
+                                        sasl.login.refresh.window.jitter
+                                        sasl.mechanism.inter.broker.protocol
+                                        ssl.cipher.suites
+                                        ssl.client.auth
+                                        ssl.enabled.protocols
+                                        ssl.endpoint.identification.algorithm
+                                        ssl.engine.factory.class
+                                        ssl.key.password
+                                        ssl.keymanager.algorithm
+                                        ssl.keystore.certificate.chain
+                                        ssl.keystore.key
+                                        ssl.keystore.location
+                                        ssl.keystore.password
+                                        ssl.keystore.type
+                                        ssl.protocol
+                                        ssl.provider
+                                        ssl.secure.random.implementation
+                                        ssl.trustmanager.algorithm
+                                        ssl.truststore.certificates
+                                        ssl.truststore.location
+                                        ssl.truststore.password
+                                        ssl.truststore.type
+                                        unclean.leader.election.enable
+                                       For entity-type 'users':
+                                        SCRAM-SHA-256
+                                        SCRAM-SHA-512
+                                        consumer_byte_rate
+                                        controller_mutation_rate
+                                        producer_byte_rate
+                                        request_percentage
+                                       For entity-type 'clients':
+                                        consumer_byte_rate
+                                        controller_mutation_rate
+                                        producer_byte_rate
+                                        request_percentage
+                                       For entity-type 'ips':
+                                        connection_creation_rate
+                                       Entity types 'users' and 'clients' may
+                                         be specified together to update
+                                         config for clients of a specific
+                                         user.
+--add-config-file <String>             Path to a properties file with configs
+                                         to add. See add-config for a list of
+                                         valid configurations.
+--all                                  List all configs for the given topic,
+                                         broker, or broker-logger entity
+                                         (includes static configuration when
+                                         the entity type is brokers)
+--alter                                Alter the configuration for the entity.
+--bootstrap-server <String: server to  The Kafka server to connect to. This
+  connect to>                            is required for describing and
+                                         altering broker configs.
+--broker <String>                      The broker's ID.
+--broker-defaults                      The config defaults for all brokers.
+--broker-logger <String>               The broker's ID for its logger config.
+--client <String>                      The client's ID.
+--client-defaults                      The config defaults for all clients.
+--command-config <String: command      Property file containing configs to be
+  config property file>                  passed to Admin Client. This is used
+                                         only with --bootstrap-server option
+                                         for describing and altering broker
+                                         configs.
+--delete-config <String>               config keys to remove 'k1,k2'
+--describe                             List configs for the given entity.
+--entity-default                       Default entity name for
+                                         clients/users/brokers/ips (applies
+                                         to corresponding entity type in
+                                         command line)
+--entity-name <String>                 Name of entity (topic name/client
+                                         id/user principal name/broker id/ip)
+--entity-type <String>                 Type of entity
+                                         (topics/clients/users/brokers/broker-
+                                         loggers/ips)
+--force                                Suppress console prompts
+--help                                 Print usage information.
+--ip <String>                          The IP address.
+--ip-defaults                          The config defaults for all IPs.
+--topic <String>                       The topic's name.
+--user <String>                        The user's principal name.
+--user-defaults                        The config defaults for all users.
+--version                              Display Kafka version.
+--zk-tls-config-file <String:          Identifies the file where ZooKeeper
+  ZooKeeper TLS configuration>           client TLS connectivity properties
+                                         are defined.  Any properties other
+                                         than zookeeper.clientCnxnSocket,
+                                         zookeeper.ssl.cipher.suites,
+                                         zookeeper.ssl.client.enable,
+                                         zookeeper.ssl.crl.enable, zookeeper.
+                                         ssl.enabled.protocols, zookeeper.ssl.
+                                         endpoint.identification.algorithm,
+                                         zookeeper.ssl.keystore.location,
+                                         zookeeper.ssl.keystore.password,
+                                         zookeeper.ssl.keystore.type,
+                                         zookeeper.ssl.ocsp.enable, zookeeper.
+                                         ssl.protocol, zookeeper.ssl.
+                                         truststore.location, zookeeper.ssl.
+                                         truststore.password, zookeeper.ssl.
+                                         truststore.type are ignored.
+--zookeeper <String: urls>             DEPRECATED. The connection string for
+                                         the zookeeper connection in the form
+                                         host:port. Multiple URLS can be
+                                         given to allow fail-over. Required
+                                         when configuring SCRAM credentials
+                                         for users or dynamic broker configs
+                                         when the relevant broker(s) are
+                                         down. Not allowed otherwise.
+
+
+Broker level configurations:
+.............................
+//Adding or editing existing broker level settings
+
+$ ./bin/kafka-configs.sh --bootstrap-server localhost:9092 --alter --entity-type brokers --entity-default --add-config min.insync.replicas=2 
+
+
+//We can delete the dynamic configuration as well:
+
+./bin/kafka-configs.sh --bootstrap-server localhost:9092 --alter --entity-type brokers --entity-default  --delete-config min.insync.replicas
+
+
+Topics:
+egs:
+./bin/kafka-configs.sh --bootstrap-server localhost:9092 \
+                --alter --entity-type topics \
+                --entity-name configured-topic \
+                --add-config max.message.bytes=10485880
+
+
+Alter topic with rention policy:
+
+Lab:
+Steps:
+1.create a new topic with default settings
+./bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic payment-topic
+2.Alter topic configuration like log retention policy
+ ./bin/kafka-configs.sh --bootstrap-server localhost:9092 --alter --entity-type topics --entity-name payment-topic --add-config retention.ms=20000
+
+After alertering , check the same process like above
+
+3.produce message 
+./bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic payment-topic
+4.consume message
+./bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic payment-topic --from-beginning
+.....................................................................................
+		How to see the configurations applied?
+
+ ./bin/kafka-topics.sh --bootstrap-server localhost:9092 --describe --topic payment-topic
+
+Topic: payment-topic    TopicId: krK_YW-aQiOm0tG2DEOxQg PartitionCount: 1       ReplicationFactor: 1    Configs: retention.ms=20000
+Topic: payment-topic    Partition: 0    Leader: 0       Replicas: 0     Isr: 0
+.....................................................................................
+				Partition
+.....................................................................................
+
+What is partition?
+    In order to distributethe "Storage and Processing of Events" in a topic, Kafka uses the concept called "Partition"
+	
+    The topic is made of  one or More partitions.
+The topic is broken into multiple partitions
+  
+  Every partion is is just folder only.
+
+  Each partition will have its own log files
+
+			   payment-topic
+				|
+		-------------------------------------------------
+		|               |              |
+	   payment-topic-0  payment-topic-1  payment-topic-2
+                |                |               |
+            log files       log files         log files
+
+
+By default every topic has only one partition.
+
+Lab:
+./bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic sales-topic --paritions 2
+
+This command will create two partitions
+ 
+After supplying partition option you can see inside kafka-logs folder
+
+/tmp/kafka-logs
+       |
+       sales-topic-0
+       sales-topic-1
+
+How to know many partitions are there in the topic
+
+./bin/kafka-topics.sh --bootstrap-server localhost:9092 --describe --topic sales-topic
+
+Topic: sales-topic   TopicId: Qld8IMqPSDqV7YMHB-dT4Q PartitionCount: 2       ReplicationFactor: 1   Configs:
+      Topic: sales-topic      Partition: 0    Leader: 0       Replicas: 0     Isr: 0
+      Topic: sales-topic      Partition: 1    Leader: 0       Replicas: 0     Isr: 0
+
+
+Why Partitions?
+
+=>Partitions helps to distribute messages into multiple log files so that we dont need to dump into one single file, we scale the message across multiple files
+=>This partition is also unit of parallelism.
+.....................................................................................
+				Segements
+....................................................................................
+What is segment?
+  Segement is just actual log files contains "Records"
+
+Topics are broken into partions , and Partitions are broken into segements
+
+How to list segements(Log file)
+/tmp/kafka-logs/sales-topic-0$ ls -l
+total 8
+-rw-r--r-- 1 subugee subugee 10485760 Jun 15 11:34 00000000000000000000.index
+-rw-r--r-- 1 subugee subugee        0 Jun 15 11:34 00000000000000000000.log
+-rw-r--r-- 1 subugee subugee 10485756 Jun 15 11:34 00000000000000000000.timeindex
+-rw-r--r-- 1 subugee subugee        8 Jun 15 11:34 leader-epoch-checkpoint
+-rw-r--r-- 1 subugee subugee       43 Jun 15 11:34 partition.metadata
+
+Here segement is group files
+.log
+.index
+.timeindex
+
+Segement is just log file where actual records is stored.
+Records are stored as "Byte Array"
+
+.log file stores actaual Records.
+.....................................................................................
+			 Segment File or Log File Architecture
+.....................................................................................
+
+How events or data or message is stored into segement?
+
+ The log file is structured with two parts
+
+ 1.Actual data- event
+ 2.Offset
+
+Actual data is event published into segement as "record" which is simple byte array.
+
+Offset:
+  An Offset into a file is simply the charactor location within that file,usually starting with 0; thus offset 240" is actually the 241st byte in the file.
+
+
+ a   b  c   d  e  f  g                   =>actual record
+-------------------------------------------------------
+ 0   1  2   3  4  5  6                    =>Offset 
+--------------------------------------------------
+
+A Partition can have multiple segement meaningthat i can have multile log files
+
+How to represent multiple segements?
+
+Segement-0        Segment-1                Segement-2 
+Offset 0-957 =>   Offset 958 to 1675  ==>  offset 1676 --?   <==Writes
+
+Only one Segement can be active at any point in time
+
+The segement size is determined by the property
+
+log.segment.bytes
+  The maximum size of a single log file.
+  When it reaches , kafka will create new one.
+
+log.segement.ms
+  The kafka will wait before commiting(Writing data) the segement
+ default 1 week.
+
+Note:
+   A kafka broker keeps an open file handler to every active segement in every partion, even for inactive segements. This leads to a usually high number of open file handles, and the OS must be tuned accordingly.
+.....................................................................................
+
+Lab:
+ in order to create new log files
+config/server.properties
+log.segment.bytes
+1.start zookeeper and kafka broker
+2.create topic with single partition
+3.Keep on publishing  messages  until it reaches 1000 bytes
+4.see the log locations /tmp/kafka-logs
+
+
 
 
 
