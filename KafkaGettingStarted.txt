@@ -1641,7 +1641,7 @@ How events or data or message is stored into segement?
  1.Actual data- event
  2.Offset
 
-Actual data is event published into segement as "record" which is simple byte array.
+Actual data is  published into segement as "record" which is simple byte array.
 
 Offset:
   An Offset into a file is simply the charactor location within that file,usually starting with 0; thus offset 240" is actually the 241st byte in the file.
@@ -1652,7 +1652,7 @@ Offset:
  0   1  2   3  4  5  6                    =>Offset 
 --------------------------------------------------
 
-A Partition can have multiple segement meaningthat i can have multile log files
+A Partition can have multiple segement meaning that i can have multile log files
 
 How to represent multiple segements?
 
@@ -1678,26 +1678,299 @@ Note:
 Lab:
  in order to create new log files
 config/server.properties
-log.segment.bytes
+log.segment.bytes=1000
 1.start zookeeper and kafka broker
 2.create topic with single partition
 3.Keep on publishing  messages  until it reaches 1000 bytes
 4.see the log locations /tmp/kafka-logs
 
+/tmp/kafka-logs/product-topic-0$ ls -l
+total 24
+-rw-r--r-- 1 subugee subugee        0 Jun 15 12:29 00000000000000000000.index
+-rw-r--r-- 1 subugee subugee      988 Jun 15 12:29 00000000000000000000.log
+-rw-r--r-- 1 subugee subugee       12 Jun 15 12:29 00000000000000000000.timeindex
+-rw-r--r-- 1 subugee subugee 10485760 Jun 15 12:29 00000000000000000012.index
+-rw-r--r-- 1 subugee subugee      580 Jun 15 12:29 00000000000000000012.log
+-rw-r--r-- 1 subugee subugee       56 Jun 15 12:29 00000000000000000012.snapshot
+-rw-r--r-- 1 subugee subugee 10485756 Jun 15 12:29 00000000000000000012.timeindex
+-rw-r--r-- 1 subugee subugee        8 Jun 15 12:28 leader-epoch-checkpoint
+-rw-r--r-- 1 subugee subugee       43 Jun 15 12:28 partition.metadata
+.....................................................................................
+				Dump log
+.....................................................................................
+Sometimes when you’re working with Kafka, you may find yourself needing to manually inspect the underlying logs of a topic.
+
+Whether you’re just curious about Kafka internals or you need to debug an issue and verify the content, the kafka-dump-log command is your friend
+
+~/kafkatraining/apacheKafka/kafka-3.4.1-src$  ./bin/kafka-dump-log.sh --print-data-log --files /../tmp/kafka-logs/todos-topic-0/00000000000000000000.log
+
+Dumping /../tmp/kafka-logs/todos-topic-0/00000000000000000000.log
+Log starting offset: 0
+baseOffset: 0 lastOffset: 0 count: 1 baseSequence: 0 lastSequence: 0 producerId: 0 producerEpoch: 0 partitionLeaderEpoch: 0 isTransactional: false isControl: false deleteHorizonMs: OptionalLong.empty position: 0 CreateTime: 1686889885086 size: 79 magic: 2 compresscodec: none crc: 565057828 isvalid: true
+| offset: 0 CreateTime: 1686889885086 keySize: -1 valueSize: 11 sequence: 0 headerKeys: [] payload: Learn Kafka
+baseOffset: 1 lastOffset: 1 count: 1 baseSequence: 1 lastSequence: 1 producerId: 0 producerEpoch: 0 partitionLeaderEpoch: 0 isTransactional: false isControl: false deleteHorizonMs: OptionalLong.empty position: 79 CreateTime: 1686889897634 size: 99 magic: 2 compresscodec: none crc: 265781907 isvalid: true
+| offset: 1 CreateTime: 1686889897634 keySize: -1 valueSize: 31 sequence: 1 headerKeys: [] payload: Learn Event Driven Architecture
+baseOffset: 2 lastOffset: 2 count: 1 baseSequence: 2 lastSequence: 2 producerId: 0 producerEpoch: 0 partitionLeaderEpoch: 0 isTransactional: false isControl: false deleteHorizonMs: OptionalLong.empty position: 178 CreateTime: 1686889905723 size: 87 magic: 2 compresscodec: none crc: 3204004559 isvalid: true
+| offset: 2 CreateTime: 1686889905723 keySize: -1 valueSize: 19 sequence: 2 headerKeys: [] payload: Learn What is Event
+.....................................................................................
+				Index Files
+.....................................................................................
+.index
+ contains the mappings of "offset" to is position in ".log" file
+.timeIndex
+  file contains the mappings of "Timestamp" to message offset
+
+if you search message based on offset, it uses index files
+if you search message based on timestamp, it uses timeindex files
+			
+			 Topic
+			   |
+		--------------------------------------
+		|              |                  |
+	 partition-0        partition-1       partition-2
+	     |
+	 00000000.log
+	    |
+	offset 0 1 2 3 ...
+	byte   x a y z ....
+ 	    |
+	 000000.index
+        offset 0  1    2   3 
+	byte   23 232 23  323
+          |
+        00000.timeindex
+       timestam 23232323   343434 34343434 
+       offset     0         1        2 
+
+...................................................................................
+			 Events/Message Distributions and Partitions
+.....................................................................................
+
+Topics are broken into partions, partions are broken into segements
+
+As Producer we send data to the Topic only, Topic distributes message among partitions
+
+Partitioner:
+   Partitioner is  a process that will determine to which partition a specific message/event will be assigned.
+
+ In Nutshell Partitioner is simple "Java Class/Program" having routing algorithim.
+ This algorthim decides where to go.
+
+For eg i have topic with 3 partition
+
+ Record===>Publish==>Partitioner===>where to to =>P1 Or P2 Or P3
+
+How  partitions are selected by Partitioner?
+ =>Based on Record only.
+
+Record contains information for how to select Partition
+
+Partitioner Algorthims:
+.......................
+1.Round Robin Alogorthim
+2.Sticky Partitioner Alogorthim
+3.Key Based Alogorthim
+
+Round Robin Algorthim:
+  It is default algorthim used in kafka old versions less than 2.3
+Lets i assum i have two partitions
+
+ M1 ------->P1
+ M2 ------->P2
+ M3-------->P1
+ M4-------->P2
+In round robin messages are distributed equally to all paritions
+
+Drawback of Round Robin Algorthim:
+...................................
+ if more messages and more partitions, there is possiblity of higher latency and low performance...
+
+Sticky Partitioner:
+...................
+  It is built on the top of Round robin only.
+  Stick Partitioner wont send indidual message/record rather it sends as batch.
+  It improves the peformance, reduces network latency.
+  This is default Partitioner in the lastest kafka 
+
+Message/Record Structure:
+
+ In kafka messages are organized based on "Key-Value" Pair.
+ By default every message has key "null" key
+
+Lab: 
+ To Test whether a message has key or not
+
+./bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic todos-topic --from-beginning --property print.key=true
+
+null    Learn Kafka
+null    Learn Event Driven Architecture
+null    Learn What is Event
+null    Learn java
+
+Here "null" is key "Learn kafka" is value
+
+You can notice there is another partitioner alogthrim called "Key" based 
+
+        "If you produce message/record/event without key means with null key"
+			  Partitioner
+		 Selects "Sticky Partitioner" 
+			  By Default
+
+Sticky Partition  = "RoundRobin + Batching"
+.....................................................................................
+Lab:
+  Create topic with 2 partitions
+  Distribute message with 'null' key ,without key
+  Watch In consumerside keys and partitions
+
+create topic 
+./bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic order-topic --partitions 2
+
+publish message without key, with null key
+
+open two cmd prompt and try to publish message see in the consumer side
+
+./bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic order-topic
+
+./bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic order-topic
 
 
 
+Consume Message:
 
+./bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic order-topic --from-beginning --property print.key=true --property print.partition=true
 
+Partition:1     null    Hello
+Partition:1     null    Hai
+Partition:1     null    How are you
+Partition:1     null    kjdaf;lkadsf
+Partition:1     null    asdfadf
+Partition:1     null    adf
+Partition:1     null    adfadfa
+Partition:1     null    adfadfa
+Partition:1     null    adfasfdasf
+Partition:1     null    adfsafd
+Partition:1     null    adfasfsadf
+Partition:1     null    adfasdfas
+Partition:1     null    adfafadf
+Partition:1     null    asfdafasf
+Partition:1     null    adfafdsaf
+Partition:1     null    adfsadfasdf
+Partition:1     null    adfsadfdsaf
+Partition:1     null    adfadsfdsaf
+Partition:1     null    adfdsafadsf
+Partition:1     null    adfsafadf
+Partition:1     null    adfasfd
+Partition:1     null    adfasfsadf
+Partition:1     null    adfdsafa
+Partition:1     null    adfadf
+Partition:1     null    asdfadsfsadf
+Partition:1     null    asdfasdf
+Partition:1     null    adfasdfadsf
+Partition:1     null    adfsadfadsf
+Partition:1     null    adsfsadfsadf
+Partition:1     null    adfasdfadsfasf
+Partition:1     null    adfasfddsafkasdfnalkjsfas
+Partition:1     null    asdfjdsalkfjhalkjdsfhlkjdsafhdsalkjhfalksjfhalkdsjfhsadf
+Partition:1     null    lakdsjflksafjhdsalkfhdsalkjfhdslkjfhdsalkjfhdsalf
+Partition:1     null    adslkfsajdhflkjsadhflkjdsfhldsakjfhdsaf
+Partition:1     null    lakdjfhlkjdsahflkdajfhldjfhadsf
+Partition:1     null    alkdsjfhlkdsahfdsakjfhdalkjfhasrewr32432432\\
+Partition:1     null    32432432
+Partition:1     null    234234
+Partition:1     null    23423123
+Partition:1     null    123213
+Partition:1     null    4324324
+Partition:1     null    234324324232355355232
+Partition:1     null    24324324
+Partition:1     null    34324324
+Partition:1     null    234324324
+Partition:1     null    234324234324324
+Partition:1     null    23423423
+Partition:1     null    24324
+Partition:1     null    24324
+Partition:1     null    243324324
+Partition:1     null    234324324
+Partition:1     null    234324324
+Partition:1     null    2343242234324324
+Partition:1     null    234324324324
+Partition:1     null    234324324324324
+Partition:1     null    41242143214
+Partition:1     null    13242142134
+Partition:1     null    242423432
+Partition:1     null    243242
+Partition:1     null    2343242
+Partition:1     null    234234
+Partition:0     null    234324
+Partition:0     null    24324324
+Partition:0     null    2234324
+Partition:0     null    234324
+Partition:0     null    234324324
+Partition:0     null    fsdf
+Partition:0     null    sdf
+Partition:1     null    Subramanian
+Partition:1     null    Karthik
+.....................................................................................
+			 Key based Distribution
+....................................................................................
 
+Lab:
+ create topic with 2 partitions
+ publish message with key
+ consume message
 
+create topic
+./bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic user-topic --partitions 2
 
+publish message with key
 
+ --property "parse.key=true"  --property "key.separator=:"
 
+./bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic user-topic
+   --property "parse.key=true"  --property "key.separator=:"
 
+Consumer
+./bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic user-topic --from-beginning --property print.key=true  --property print.value=true  --property print.partition=true
 
+artition:1     id      1
+Partition:1     project IBM
+Partition:1     project java
+Partition:1     project microservices
+Partition:1     client  google
+Partition:1     null       --property "parse.key=true"  --property "key.sepapayment:cash
+Partition:1     Client  yahoo
+Partition:1     client  microsoft
+Partition:1     client  yahoo
+Partition:1     id      1
+Partition:0     2       33434
+Partition:0     2       88888
+Partition:1     3       8833434
+Partition:1     3       34343434
+Partition:1     4       8833434
+Partition:0     2       343434
+Partition:1     3       33434
+Partition:0     56      88343434
+Partition:0     58      343434
+Partition:0     23      42323
+Partition:1     id      2232323
+.....................................................................................
+  	How key-value pair messages are distributed to partitions
+...................................................................................
+In the old, kafka they used "round robind".
+There is problem when i send the event with same, it is distributed in different partitions which is not that much efficient.
 
+Kafka introduced an alorithim called "Key Hashing Algorithm"
 
+Key hahing is the process of determining the mapping of a key to a partition in the default partitioner.
+The keys are hashed based on an algorthim called "murmur2 "
+
+  Targetpartition = Math.abs(Util.murmur2(KeyInBytes) % (numPartiontions-1) 
+   
+Note;
+  if you have same key ,but different values, the same partition will be used
+....................................................................................
+			  Kafka Internal Architecture
+....................................................................................
 
 
 
