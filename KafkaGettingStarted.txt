@@ -2045,23 +2045,332 @@ So once enough time or enough data has been accumulated in those record batches,
 Then record batches will be sent to the broker. 
 
 
+.....................................................................................
+			-Inside Broker-Network Thread Adds Request to Queue
+.....................................................................................
+
+Socket Receive Buffer:
+.....................
+ The Produce Request first lands in the broker's Socket Receive Buffer.
+
+Network Thread:
+...............
+  From the socket Receiver buffer, the network thread will pick up the RecordBatch.
+  The Network thread is created from the Thread Pool.
+  The Network thread will read the data from the socket receive buffer.
+  That network thread will handle that particular client request through the rest of   its life cycle.
+  The thread forms "Produce Request Object" and add it to the "Request Queue"
 
 
+Client====>Record====>[RecordBatch]====>Broker's Socket Recieve Buffer==>Thread reads Record Batch===>Forms a [Produce Request Object]===>Produce Request Object added into Request Queue.
+.....................................................................................
+				IO Threads
+.....................................................................................
+
+IO threads are nothing but non blocking threads.
+
+IO operations are performed by
+
+1.Blocking IO
+   Dedicated threads are created and works for each io operation
+2.NonBlocking IO
+  Shared threads are created and shared among multiple io operations
+
+Network threads are blocking io threads , its job is just read batches from the socket receive buffer and writes into request Queue as Request Produce Object.
+
+IO threads are non blocking threads.
+
+Role of IO Threads:
+..................
+=>A thread from the I/O thread pool will pick up the request from the Queue.
+=>The I/O thread will perform some validations
+    =>CRC check of the data in the request
+    =>Once the validation is over,it will append the data to the physical data       structure of the partition which is commit log.
+
+.....................................................................................
+			 Purgatory
+....................................................................................
+
+Purgator is the place where data to be replicated to other brokers.
+Kafka relies on replication to multiple broker nodes.
+
+.....................................................................................
+			 Purgatory
+....................................................................................
+
+Purgator is the place where data to be replicated to other brokers.
+Kafka relies on replication to multiple broker nodes.
+
+Replication:  
+   Copying the event records across multiple brokers in the cluster
+   Replication makes your events highly available and saves from the fail over
+
+By default , the broker will not give response(ack) on the produce request until it has been replicated to other brokers.
+
+Purgatory Map:
+ To avoid tying up the IO threads while waiting for the replication step to complete
+The request object will be stored in a map-like data structure called "Purgatory Map"
+
+ Map is just like another buffer , for replication
+ From the Map replication starts.
+
+ .....................................................................................
+			 Response Generation
+.....................................................................................
+
+Once the request has been fully replicated, the broker will take the request object out of purgatory, generate a reponse object and place in the response buffer/queue
+
+From the response queue, the network thread will pick up the generated response, and send its data to the socket send buffer.
+
+The network thread also enforces ordering of requests from an indidual client by waiting for all of the bytes for response from the client to be sent before taking another object from the response queue.
+.....................................................................................
+				 Page Cache
+.....................................................................................
+Page is like files/data written to disk, ,its index/meta cached by Main Memory.
+Before writing data into disk , the kafka writes data into page cache. in order improve disk io the linux operating system provides this feature , kafka uses this feature to write very fast.
+	.....................................................................................
+				Fetch Request-Consumer Side
+....................................................................................
+	
+In order to consume records, a consumer client sends a fetch request to the broker
+by specifing the topic,partition,and offset it wants to consume.
+The fetch request goes to the broker's socket receive buffer where it is picked by a network thread.
+The network thread puts the request in the request queue, as was done with the produce request.
+
+How to enable replication?
+
+When create new topic,we can enable replication at the topic level.
+
+When we create new topic, we can specify, explicitly or through defaults, how many replicas you want.
+
+eg:
+ ./bin/kafka-topics.sh --bootstrap-server localhost:9092 --topic my-group-topic --create  --partitions 3 --replication-factor 2
+
+Replication factor :
+ Each partition of that topic will be replicated that  many times.
+
+my-group-topic partion data to be avilable in 3 machines(three brokers).
+
+ ./bin/kafka-topics.sh --bootstrap-server localhost:9092 --topic my-group-topic --create  --partitions 3 --replication-factor 3
+
+With a replication factor of N, we can tolerate N-1 failure,without data loss, and while mainitaing availability.
+
+ ./bin/kafka-topics.sh --bootstrap-server localhost:9092 --topic my-group-topic --create  --partitions 3 --replication-factor 3
+
+3 larger than available brokers: 1.
+
+[2023-06-19 12:31:32,421] ERROR org.apache.kafka.common.errors.InvalidReplicationFactorException: Replication factor: 3 larger than available brokers: 1.
+ (kafka.admin.TopicCommand$)
+
+Here why this error?
+   We have only one broker in the cluster, but we are telling/configuring that we need to replicate the data into multiple brokers
+
+We will fix this after running multiple brokers...
+.....................................................................................
+			Single Node KRaft Setup - without zookeeper
+.....................................................................................
+
+How to start Kafka clsuter with KRaft?
+
+In order to start Kraft mode, we need to create "Cluster Id".
+
+ClusterId must be unique no.
+
+Steps:
+
+1.Generate a Cluster ID
+
+Before generating cluster id we need to know , how to use kafka-storage.sh utility.
+
+./bin/kafka-storage.sh --help
+usage: kafka-storage [-h] {info,format,random-uuid} ...
+
+The Kafka storage tool.
+
+positional arguments:
+  {info,format,random-uuid}
+    info                 Get information about the Kafka log directories on this node.
+    format               Format the Kafka log directories on this node.
+    random-uuid          Print a random UUID.
+
+optional arguments:
+  -h, --help             show this help message and exit
+
+		
+$KAFKA_CLUSTER_ID="$(bin/kafka-storage.sh random-uuid)"
+$echo  $KAFKA_CLUSTER_ID
+rJwOwZYYRbCKWj5o6L9PKQ	
+ 
+2.Format Log directories using cluster id
+
+./bin/kafka-storage.sh format -t $KAFKA_CLUSTER_ID -c config/kraft/server.properties
+Formatting /tmp/kraft-combined-logs with metadata.version 3.5-IV2.		
+
+3.start kafka server in kraft mode
+
+./bin/kafka-server-start.sh  config/kraft/server.properties
+
+4.create topic 
+./bin/kafka-topics.sh --create --topic todos --bootstrap-ser
+ver localhost:9092
+5.Describe topic
+./bin/kafka-topics.sh --describe --topic todos --bootstrap-s
+erver localhost:9092
+.....................................................................................				 Multi node setup with Kraft
+....................................................................................
+Pre requiests:
+1.You need lastest kafka distribution which supports kRaft configuration.
+
+Steps:
+.......
+1.Just explore config files
+
+ kafka_2.12-3.5.0/config/kraft
+   server.properties
+   broker.properties
+   controller.properties
+
+Here all the properties files are same only. 
+We have discussed already that KRaft can be configureed using existing brokers.
+
+You can configure any broker as "Only Controller" - We cant store topics data..
+You can configure any broker as "Only Broker" - we store regular topics data..
+YOu can configure any broker as "broker and controller" - we can store cluster meta data and also user's topics data
+
+server.properties = Broker + controller
+broker.properties = Broker
+controller.properties = controller
+
+Note: 
+ you dont need to use only these config files to configure broker,controller, broker and controller.
+ You can use even any properties files just we need to configure inside property file
+
+The property
+server.properties
+ process.roles=broker,controller
+	
+if you start broker alone - process.roles=broker
+if you start controller alone - process.roles=controller
+if you start broker and controller alone - process.roles=broker,controller
+....................................................................................
+			  NODE ID
+..................................................................................
+
+node.id = 1 | node.id=2 | node.id=3
+
+ Each node is identified in the cluster by node id.
+
+.....................................................................................
+			  Controller configuration
+.....................................................................................
+You can configure the list of "controllers" in the cluster.
+
+# The connect string for the controller quorum
+controller.quorum.voters=1@localhost:9093
+
+Here
+  "1" is node id => The node one is controller
+  "localhost" is host name of the controller
+  "9093" is port of the controller
+
+controller.quorum.voters says list of controllers
+
+lets say i have two node
+
+1.node-1 and node-2
+
+node-1 is designated as broker
+node-2 is designated as controller
+
+node-1
+  process.roles=broker
+  node.id=1
+  controller.quorum.voters=2@localhost:9092
+
+node-2
+  process.roles=controller
+  node.id=2
+  controller.quorum.voters=3@localhost:9094
+...................................................................................
+
+1.node-1 and node-2
+
+node-1 is designated as broker and controller
+node-2 is designated as controller and broker
+
+node-1
+  process.roles=controller,broker
+  node.id=1
+  controller.quorum.voters=1@localhost:9092 2@localhost:9093
 
 
+node-2
+  process.roles=controller,broker
+  node.id=2
+  controller.quorum.voters=1@localhost:9092 2@localhost:9093
+.....................................................................................
+			Socket server settings
+....................................................................................
 
-    
+if broker: broker.properties
+................................
+
+ listeners=PLAINTEXT://localhost:9092
+The broker is running on which port and which host
+"PLAINTEXT" is the protocal used by kafka for internal node communications
+
+# Name of listener used for communication between brokers.
+inter.broker.listener.name=PLAINTEXT
+
+controller.listener.names=CONTROLLER
+ -Name of the Controller protocal is "CONTROLLER"
+
+if controller: controller.properties
+.....................................
+
+listeners=CONTROLLER://:9093
+controller.listener.names=CONTROLLER
 
 
+if both broker and controller:
 
+listeners=PLAINTEXT://:9092,CONTROLLER://:9093
 
+ Here one single node supports both broker and controller
+ 
+  broker is running in 9092 port
+  controller is running in 9093 port
+.....................................................................................
+			Log dir
+....................................................................................
 
+if you start multi node arch.. each node must have its own log files
 
+if you run multiple brokers and controllers in the single host(machine), you need to specifiy the separate location.
 
+log.dirs=/tmp/server-1/kraft-combined-logs
 
-			
+log.dirs=/tmp/server-2/kraft-combined-logs
+
+log.dirs=/tmp/server-2/kraft-combined-logs
+....................................................................................
+
+Demo steps:
+I am going to create many config files
+server1.properites
+server2.properties
+server3.properties
+
+ubugee@LAPTOP-R2TGGFDL:~/kafkatraining/kafka_2.12-3.5.0/config/kraft$ cp server.properties server1.properties
+subugee@LAPTOP-R2TGGFDL:~/kafkatraining/kafka_2.12-3.5.0/config/kraft$ ls
+broker.properties  controller.properties  server.properties  server1.properties
+subugee@LAPTOP-R2TGGFDL:~/kafkatraining/kafka_2.12-3.5.0/config/kraft$ cp server.properties server2.properties
+subugee@LAPTOP-R2TGGFDL:~/kafkatraining/kafka_2.12-3.5.0/config/kraft$ cp server.properties server3.properties
+su
+
  
 		
+
 
 
 
