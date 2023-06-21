@@ -2368,9 +2368,560 @@ subugee@LAPTOP-R2TGGFDL:~/kafkatraining/kafka_2.12-3.5.0/config/kraft$ cp server
 subugee@LAPTOP-R2TGGFDL:~/kafkatraining/kafka_2.12-3.5.0/config/kraft$ cp server.properties server3.properties
 su
 
- 
-		
+Server -1 Setup:Node-1 Setup:
+...............................
+server1.properties
+Note: here we need to define controller port and broker port should be different
+controller port is used for controller communication
+broker port is used for external communication like producers and consumers
 
+
+
+# The role of this server. Setting this puts us in KRaft mode
+process.roles=broker,controller
+
+# The node id associated with this instance's roles
+node.id=1
+
+# The connect string for the controller quorum
+controller.quorum.voters=1@localhost:19092,2@localhost:19093,3@localhost:19094
+
+listeners=PLAINTEXT://:9092,CONTROLLER://:19092
+inter.broker.listener.name=PLAINTEXT
+advertised.listeners=PLAINTEXT://localhost:9092
+controller.listener.names=CONTROLLER
+log.dirs=/tmp/server1/kraft-combined-logs
+
+server2.properties
+
+# The role of this server. Setting this puts us in KRaft mode
+process.roles=broker,controller
+
+# The node id associated with this instance's roles
+node.id=2
+
+# The connect string for the controller quorum
+controller.quorum.voters=1@localhost:19092,2@localhost:19093,3@localhost:19094
+listeners=PLAINTEXT://:9093,CONTROLLER://:19093
+inter.broker.listener.name=PLAINTEXT
+advertised.listeners=PLAINTEXT://localhost:9093
+controller.listener.names=CONTROLLER
+log.dirs=/tmp/server2/kraft-combined-logs
+
+
+server3.properties
+
+# The role of this server. Setting this puts us in KRaft mode
+process.roles=broker,controller
+
+# The node id associated with this instance's roles
+node.id=3
+
+# The connect string for the controller quorum
+controller.quorum.voters=1@localhost:19092,2@localhost:19093,3@localhost:19094
+
+listeners=PLAINTEXT://:9094,CONTROLLER://:19094
+inter.broker.listener.name=PLAINTEXT
+advertised.listeners=PLAINTEXT://localhost:9094
+controller.listener.names=CONTROLLER
+log.dirs=/tmp/server3/kraft-combined-logs
+.....................................................................................
+
+Step 4: Generate clusterid
+ in order to establish cluster, we need cluster unique id, through which we establish cluster.
+
+./bin/kafka-storage.sh random-uuid
+sRfy5Wl3SZOkXfehOuYRCQ
+We have generated unique cluster id
+
+
+Step 5: We have to format all the storage directories, this is basically where put in log.dirs properties
+
+		
+ubugee@LAPTOP-R2TGGFDL:~/kafka_2.12-3.5.0$ ./bin/kafka-storage.sh format -t sRfy5Wl3SZOkXfehOuYRCQ -c ./config/kraft/server1.properties
+Formatting /tmp/server-1/kraft-combined-logs with metadata.version 3.5-IV2.
+subugee@LAPTOP-R2TGGFDL:~/kafka_2.12-3.5.0$ ./bin/kafka-storage.sh format -t sRfy5Wl3SZOkXfehOuYRCQ -c ./config/kraft/server2.properties
+Formatting /tmp/server-2/kraft-combined-logs with metadata.version 3.5-IV2.
+subugee@LAPTOP-R2TGGFDL:~/kafka_2.12-3.5.0$ ./bin/kafka-storage.sh format -t sRfy5Wl3SZOkXfehOuYRCQ -c ./config/kraft/server3.properties
+Formatting /tmp/server-3/kraft-combined-logs with metadata.version 3.5-IV2.
+su
+
+Step 6: we need allocate max memory, in order to work cluster properly
+
+export KAFKA_HEAP_OPTS="-Xmx200M -Xms100M"
+
+Step 7: We need to start all kafka servers in daemon mode
+
+./bin/kafka-server-start.sh -daemon ./config/kraft/server1.properties
+./bin/kafka-server-start.sh -daemon ./config/kraft/server2.properties
+./bin/kafka-server-start.sh -daemon ./config/kraft/server3.properties
+
+Step 8:Test all servers are running
+ jcmd | grep kafka
+7272 kafka.Kafka ./config/kraft/server2.properties
+7113 kafka.Kafka ./config/kraft/server1.properties
+7470 kafka.Kafka ./config/kraft/server3.properties
+
+Step 9: create topic 
+./bin/kafka-topics.sh --create --topic kraft-test --partitions 3 --replication-factor 3 --bootstrap-server localhost:9092
+
+Created topic kraft-test.
+
+Step 10:
+./bin/kafka-topics.sh  --bootstrap-server localhost:9092 --list
+
+Step 11:
+./bin/kafka-topics.sh  --bootstrap-server localhost:9092 --l describe kraft-test
+
+opic: kraft-test       TopicId: YRSN_8SSRzm4GEf2DdvqnQ PartitionCount: 3       ReplicationFactor: 3    Configs: segment.bytes=1073741824
+        Topic: kraft-test       Partition: 0    Leader: 1       Replicas: 1,2,3 Isr: 1,2,3
+        Topic: kraft-test       Partition: 1    Leader: 2       Replicas: 2,3,1 Isr: 2,3,1
+        Topic: kraft-test       Partition: 2    Leader: 3       Replicas: 3,1,2 Isr: 3,1,2
+
+Step 12: produce and consume
+
+./bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic kraft-test
+
+ ./bin/kafka-console-producer.sh --bootstrap-server localhost:9093 --topic kraft-test
+
+
+Now you are entering message in 9093 node, but messages are delivered via 9093 which means the data is distributed across the cluster
+....................................................................................
+			    Confluent Kafka
+.....................................................................................
+
+Confluent is basically a company who gives enterprise "Kafka Platform",Confluent kafka.
+
+Confluent kafka is abstraction on the top of apache kafka.
+
+Confluent Kafka provides various production ready features.
+
+Step:
+
+https://www.confluent.io/get-started/
+
+There are two major deployments
+ -Cloud
+ -Self Managed
+
+Self managed:
+
+Choose An Installation Type
+   Install Confluent Platform on a single local machine by using ZIP or TAR archives or Docker images.
+
+Local
+  -zip - windows
+  -tar -  linux
+  -docker 
+Distributed
+  -Kubernets
+  -Ansible Playbooks
+
+Local - Linux :
+...............
+Install Manually
+   1.Install Confluent Platform using TAR Archives
+   2.Install Confluent Platform using Systemd on Ubuntu and Debian
+
+Confluent Platform tools:
+ 
+=>Enterprise tools
+   Subject to license
+=>Community tools
+   Mostly open source
+
+Setup : tar format.
+...................
+
+Setup Confluent Platform:
+.........................
+curl -O https://packages.confluent.io/archive/7.4/confluent-7.4.0.tar.gz
+
+tar xzf confluent-7.4.0.tar.gz
+
+
+Folder	Description
+/bin/	Driver scripts for starting and stopping services
+/etc/	Configuration files
+/lib/	Systemd services
+/libexec/	Multi-platform CLI binaries
+/share/	Jars and licenses
+/src/	Source files that require a platform-dependent build
+
+Optionally configure CONFLUENT_HOME
+
+export CONFLUENT_HOME=<The directory where Confluent is installed>
+eg:
+export CONFLUENT_HOME=/home/subugee/confluent-7.4.0
+
+subugee@LAPTOP-R2TGGFDL:~/confluent-7.4.0$ export CONFLUENT_HOME=/home/subugee/confluent-7.4.0
+subugee@LAPTOP-R2TGGFDL:~/confluent-7.4.0$ echo $CONFLUENT_HOME
+/home/subugee/confluent-7.4.0
+s
+..............
+
+How to use Confluent tool?
+
+./confluent --help
+Manage your Confluent Cloud or Confluent Platform. Log in to see all available commands.
+
+Usage:
+  confluent [command]
+
+Available Commands:
+  cloud-signup    Sign up for Confluent Cloud.
+  completion      Print shell completion code.
+  context         Manage CLI configuration contexts.
+  help            Help about any command
+  kafka           Manage Apache Kafka.
+  local           Manage a local Confluent Platform development environment.
+  login           Log in to Confluent Cloud or Confluent Platform.
+  logout          Log out of Confluent Cloud or Confluent Platform.
+  plugin          Manage Confluent plugins.
+  prompt          Add Confluent CLI context to your terminal prompt.
+  secret          Manage secrets for Confluent Platform.
+  shell           Start an interactive shell.
+  version         Show version of the Confluent CLI.
+
+Flags:
+      --version         Show version of the Confluent CLI.
+  -h, --help            Show help for this command.
+      --unsafe-trace    Equivalent to -vvvv, but also log HTTP requests and responses which may contain plaintext secrets.
+  -v, --verbose count   Increase verbosity (-v for warn, -vv for info, -vvv for debug, -vvvv for trace).
+
+Use "confluent [command] --help" for more information about a command.
+
+Confluent platform is used in two mode
+
+1.local mode - dev,testing
+2.prod mode -production mode
+
+if you are going to use confluent local,the command starts like below
+
+./confluent local --help
+Use the "confluent local" commands to try out Confluent Platform by running a single-node instance locally on your machine. Keep in mind, these commands require Java to run.
+
+Usage:
+  confluent local [command]
+
+Available Commands:
+  current     Get the path of the current Confluent run.
+  destroy     Delete the data and logs for the current Confluent run.
+  services    Manage Confluent Platform services.
+  version     Print the Confluent Platform version.
+
+Global Flags:
+  -h, --help            Show help for this command.
+      --unsafe-trace    Equivalent to -vvvv, but also log HTTP requests and responses which may contain plaintext secrets.
+  -v, --verbose count   Increase verbosity (-v for warn, -vv for info, -vvv for debug, -vvvv for trace).
+
+Use "confluent local [command] --help" for more information about a command.
+
+How to reset existing confluent stack?
+
+./confluent local destroy
+
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+
+Services :
+  To start zookeeper,kafka broker,........
+
+./confluent local services --help
+Manage Confluent Platform services.
+
+Usage:
+  confluent local services [command]
+
+Available Commands:
+  connect         Manage Connect.
+  control-center  Manage Control Center.
+  kafka           Manage Apache Kafka®.
+  kafka-rest      Manage Kafka REST.
+  ksql-server     Manage ksqlDB Server.
+  list            List all Confluent Platform services.
+  schema-registry Manage Schema Registry.
+  start           Start all Confluent Platform services.
+  status          Check the status of all Confluent Platform services.
+  stop            Stop all Confluent Platform services.
+  top             View resource usage for all Confluent Platform services.
+  zookeeper       Manage Apache ZooKeeper™.
+
+How to start Confluent Platform services?
+
+./confluent local services start
+The local commands are intended for a single-node development environment only, NOT for production usage. See more: https://docs.confluent.io/current/cli/index.html
+As of Confluent Platform 8.0, Java 8 is no longer supported.
+
+Using CONFLUENT_CURRENT: /tmp/confluent.629193
+Starting ZooKeeper
+ZooKeeper is [UP]
+Starting Kafka
+Kafka is [UP]
+Starting Schema Registry
+Schema Registry is [UP]
+Starting Kafka REST
+Kafka REST is [UP]
+Starting Connect
+Connect is [UP]
+Starting ksqlDB Server
+ksqlDB Server is [UP]
+Starting Control Center
+Control Center is [UP]
+
+Test Web browser
+
+http://localhost:9021/clusters
+
+Inside confluent dashboard, add topic, produce message
+
+
+in the console you can watch the message delivery.
+
+./kafka-console-consumer --topic order-topic --bootstrap-server localhost:9092 --from-beginning
+{"ordertime":1497014222380,"orderid":18,"itemid":"Item_184","address":{"city":"Mountain View","state":"CA","zipcode":94041}}
+{"ordertime":1497014222380,"orderid":18,"itemid":"Item_184","address":{"city":"Mountain View","state":"CA","zipcode":94041}}
+{"ordertime":1497014222380,"orderid":20,"itemid":"Item_184","address":{"city":"Mountain View","state":"CA","zipcode":94041}}
+.....................................................................................
+			 Kafka Schema Registry
+.....................................................................................
+
+How Kafka stores events inside log?
+  Byte Array.
+
+Applications may deal various data formats like json,xml,avro.......
+
+
+What if applications send json to kafka server?
+   How kafka server deals the json into byte format
+Even applications need json as output from the Kafka server?
+   Byte to JSON
+
+Schema Registry:
+	Schema Registry provides a centralized repository for managing and validating schemas for topic message data, and for serialization and deserilazation of the data over the network. Producers and consumers to Kafka topics can use schemas to ensure data consistency and compatibility as schemas evolve
+....................................................................................
+				Kafka Streams
+.....................................................................................
+
+Stream flow of data.
+
+Streaming implemenations:
+->Java stream
+->Reactive Programming - Rxjava,Project Reactor,Mutiny
+
+Kafka Streams is a client library for building applications and microservices, where the input and output data are stored in an Apache Kafka® cluster. It combines the simplicity of writing and deploying standard Java and Scala applications on the client side with the benefits of Kafka’s server-side cluster technology.
+
+Kafka streams aim to process logs,transform logs,filter logs in the client apps.
+ 
+for eg:
+ i have order events(records) in the kafka broker
+
+In the app, when i fetch records, i dont want all order events, only i want completed orders.
+
+static Topology buildTopology(String inputTopic, String outputTopic) {
+    Serde<String> stringSerde = Serdes.String();
+    StreamsBuilder builder = new StreamsBuilder();
+    builder
+        .stream(inputTopic, Consumed.with(stringSerde, stringSerde))
+        .peek((k,v) -> logger.info("Observed event: {}", v))
+        .mapValues(s -> s.toUpperCase())
+        .peek((k,v) -> logger.info("Transformed event: {}", v))
+        .to(outputTopic, Produced.with(stringSerde, stringSerde));
+    return builder.build();
+}
+.....................................................................................
+			  Kafak Streams - Advanced - KSQL Db
+.....................................................................................
+
+.....................................................................................
+			  KSQLDB
+.....................................................................................
+
+What is KsqlDB?
+ The database purpose-built for stream processing applications.
+  KSqlDb is technology built for kafka to process events using more declarative looks like traditional sql like syntax- create table,create stream,select,insert,update
+
+Why kSqldb?
+ Kafka streams works very well as a java based stream processing api, both to build scalable,standalone stream processing applications and to enrich java applications with stream processing functionality that complements their other functions.
+
+But what if you dont have an existing env or app to java? what if you find it advantageious from an arhitectural or operational perspective to deploy a stream processing job without its own web interface or API to expose result to the front end?
+    "This is where ksqlDB comes in"
+
+
+KSQLDb is a highly sepcialized kind of database that is optimized for a streaming processing applications.
+
+It runs on a scable falut tolerant cluster of its own, exposing REST api to other applications.
+
+The KSql db offers SQL like syntax.
+....................................................................................
+				Steps to implement KSQL Databse
+.....................................................................................
+
+How to start Ksql db?
+
+1. Get standalone ksqlDB
+Since ksqlDB runs natively on Apache Kafka®, you'll need to have a Kafka cluster that ksqlDB is configured to use. Use the steps to the right to install the latest release of ksqlDB.
+
+Note: This guide assumes that your machine is configured with a supported JVM.
+
+Many setup formats
+
+1.stand alone setup
+ -> you can install ksql db manually.
+ -> you can install ksql db via docker.
+
+I am going to show how to install ksql db in standalone linux server
+
+
+Setup:
+
+# Install basic software
+sudo apt update
+sudo apt install -y software-properties-common curl gnupg
+
+# Import the public key
+curl -sq http://ksqldb-packages.s3.amazonaws.com/deb/0.28/archive.key | sudo apt-key add -
+
+# Add the ksqlDB apt repository
+sudo add-apt-repository "deb http://ksqldb-packages.s3.amazonaws.com/deb/0.28 stable main"
+sudo apt update
+
+# Install the package
+sudo apt install confluent-ksqldb
+
+
+2. Configure ksqlDB server
+
+Ensure your ksqlDB server has network connectivity to Kafka.
+
+Edit the highlighted line in /etc/ksqldb/ksql-server.properties to match your Kafka hostname and port.
+
+
+ksql-server.properties 
+
+#------ Kafka -------
+
+# The set of Kafka brokers to bootstrap Kafka cluster information from:
+bootstrap.servers=localhost:9092
+            
+# Enable snappy compression for the Kafka producers
+compression.type=snappy
+
+
+3. Start ksqlDB's server
+	When you're ready to run it as a service, you'll want to manage ksqlDB with something like systemd.
+
+ sudo /usr/bin/ksql-server-start /etc/ksqldb/ksql-server.properties
+.....................................................................................
+			In order to write stream processing 
+			    we need cli 
+
+/usr/bin/ksql http://0.0.0.0:8088
+
+.....................................................................................
+Programming with KSql db:
+
+Create Stream:
+
+Stream:
+  A Stream is a partioned,immutable,append-only collection that represents a series of historical facts.
+for eg a transactions like "subramanian sent 1000 rs to karthik" , followed by "Ram sent 10000rs to Murali"
+
+Once a row is inserted into a stream, it can never change.
+A new row is appeneded at end of the stream but existings rows never be updated or deleted.
+
+Each row is stored in a particular partions,Each row implicitly or explictly has  a key that represents its identity..All rows with same key redside in the same partition.
+
+Materialized View:
+ The View of data that is merged from different data sets and projected as one single data set.
+
+Tables:
+  A table is mutable , partitioned collection that models change over time. In contrast with strea, which reprents histrical sequeance of events, a table represents what is true a of now. 
+for you can use table to model the locations where some has lived as a stream first chennai,the delhi and then london and so forth...
+
+How tables work?
+ Tables work leveraging the keys of each row, if a sequence of rows shares a key, the last row for a given key represents the most up-to-date information for that key's identity.
+
+The first we need to create stream.
+The scream essentially assoicates a schema with underlying kafak topic
+
+CREATE STREAM riderLocations (profileId VARCHAR, latitude DOUBLE, longitude DOUBLE)
+  WITH (kafka_topic='locations', value_format='json', partitions=1);
+
+kafka_topic :
+  The name of the topic where stream data lives
+value_format => encoding message format
+fields are going to be json keys
+
+ {
+  "profileId" : "1"
+  "latitude":11.444,
+  "longitude" : 45.87
+ }
+
+partitiions:
+  No of partitions to store topic
+
+
+1.Create Stream:
+
+CREATE STREAM riderLocations (profileId VARCHAR, latitude DOUBLE, longitude DOUBLE)
+  WITH (kafka_topic='locations', value_format='json', partitions=1);
+
+Create View to View(Materialized View):
+.......................................
+Use case : i want to track the live current location of each rider.
+
+CREATE TABLE currentLocation AS
+  SELECT profileId,
+         LATEST_BY_OFFSET(latitude) AS la,
+         LATEST_BY_OFFSET(longitude) AS lo
+  FROM riderlocations
+  GROUP BY profileId
+  EMIT CHANGES;
+
+Use case : I want to know the rider's MountView
+
+CREATE TABLE ridersNearMountainView AS
+  SELECT ROUND(GEO_DISTANCE(la, lo, 37.4133, -122.1162), -1) AS distanceInMiles,
+         COLLECT_LIST(profileId) AS riders,
+         COUNT(*) AS count
+  FROM currentLocation
+  GROUP BY ROUND(GEO_DISTANCE(la, lo, 37.4133, -122.1162), -1);
+
+7.Run a push query over the stream
+-- Mountain View lat, long: 37.4133, -122.1162
+
+SELECT * FROM riderLocations
+  WHERE GEO_DISTANCE(latitude, longitude, 37.4133, -122.1162) <= 5 EMIT CHANGES;
+
+
+ 8. Start another CLI session
+Since the CLI session from (6) is busy waiting for output from the push query, let's start another session that we can use to write some data into ksqlDB.
+
+/usr/bin/ksql http://0.0.0.0:8088
+
+9. Populate the stream with events
+
+Run each of the given INSERT statements within the new CLI session, and keep an eye on the CLI session from (5) as you do.
+
+
+The push query will output matching rows in real time as soon as they're written to the riderLocations stream
+
+INSERT INTO riderLocations (profileId, latitude, longitude) VALUES ('c2309eec', 37.7877, -122.4205);
+INSERT INTO riderLocations (profileId, latitude, longitude) VALUES ('18f4ea86', 37.3903, -122.0643);
+INSERT INTO riderLocations (profileId, latitude, longitude) VALUES ('4ab5cbad', 37.3952, -122.0813);
+INSERT INTO riderLocations (profileId, latitude, longitude) VALUES ('8b6eae59', 37.3944, -122.0813);
+INSERT INTO riderLocations (profileId, latitude, longitude) VALUES ('4a7c7b41', 37.4049, -122.0822);
+INSERT INTO riderLocations (profileId, latitude, longitude) VALUES ('4ddad000', 37.7857, -122.4011);
+
+10. Run a Pull query against the materialized view
+Finally, we run a pull query against the materialized view to retrieve all the riders that are currently within 10 miles from Mountain View.
+
+In contrast to the previous push query which runs continuously, the pull query follows a traditional request-response model retrieving the latest result from the materialized view
+
+
+SELECT * from ridersNearMountainView WHERE distanceInMiles <= 10;
+******************************************....**************************************
 
 
 
